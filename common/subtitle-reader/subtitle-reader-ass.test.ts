@@ -6,12 +6,13 @@ import { SubtitleHtml } from '@project/common';
 jest.mock('@qgustavor/srt-parser', () => ({ __esModule: true, default: class {} }));
 
 // Uses the real ass-compiler, which subtitle-reader.test.ts mocks out.
-const createReader = () =>
+const createReader = (renderAssSigns = false) =>
     new SubtitleReader({
         regexFilter: '',
         regexFilterTextReplacement: '',
         subtitleHtml: SubtitleHtml.render,
         convertNetflixRuby: false,
+        renderAssSigns,
         pgsParserWorkerFactory: () => Promise.reject(new Error('PGS worker is not used in these tests')),
     });
 
@@ -59,5 +60,71 @@ describe('ASS typeset signs', () => {
             'Look up again!',
             'Loud, but not positioned.',
         ]);
+        expect(subtitles.every((subtitle) => subtitle.assLayout === undefined)).toBe(true);
+    });
+
+    it('keeps positioned signs with their layout when signs are rendered', async () => {
+        const subtitles = await createReader(true).subtitles([
+            {
+                fileParts: [
+                    assFile([
+                        String.raw`Dialogue: 0,0:00:01.00,0:00:05.00,Default,SIGN,0,0,0,,{\an8\bord3\fs36\fnGeorgia\c&H0080FF&\3c&HFFFFFF&\alpha&H80&\frz10\fscx90\b1\fad(200,300)\move(320,36,160,72,1000,3000)}Classroom`,
+                        String.raw`Dialogue: 0,0:00:01.00,0:00:05.00,Default,SIGN,0,0,0,,{\fs15\i1\pos(64,180)}Rustle\NRustle`,
+                        String.raw`Dialogue: 0,0:00:01.00,0:00:05.00,Default,,0,0,0,,{\pos(100,100)\p1}m 0 0 l 10 0 10 10{\p0}`,
+                        String.raw`Dialogue: 0,0:00:01.00,0:00:05.00,Default,,0,0,0,,{\pos(100,100)\fs20\clip(0,0,320,180)}Clipped`,
+                        'Dialogue: 0,0:00:02.00,0:00:04.00,Default,TEACHER,0,0,0,,This is where it starts.',
+                        String.raw`Dialogue: 0,0:00:06.00,0:00:08.00,Default,ASHITO,0,0,0,,{\pos(460,247.5)}Look up!`,
+                    ]),
+                ],
+            },
+        ]);
+
+        expect(subtitles.map((subtitle) => [subtitle.text, subtitle.assLayout !== undefined])).toEqual([
+            ['Classroom', true],
+            ['Rustle\nRustle', true],
+            ['This is where it starts.', false],
+            ['Look up!', false],
+        ]);
+        expect(subtitles[0].assLayout).toEqual({
+            x: 0.5,
+            y: 0.1,
+            alignment: 8,
+            move: { x: 0.25, y: 0.2, start: 1000, end: 3000 },
+            fadeIn: 200,
+            fadeOut: 300,
+            fontFamily: 'Georgia',
+            fontSize: 0.1,
+            color: 'rgba(255, 128, 0, 0.498)',
+            outlineColor: 'rgba(255, 255, 255, 0.498)',
+            outlineWidth: 3 / 360,
+            bold: true,
+            italic: false,
+            rotation: 10,
+            scaleX: 0.9,
+            scaleY: 1,
+        });
+        expect(subtitles[1].assLayout).toMatchObject({
+            x: 0.1,
+            y: 0.5,
+            alignment: 2,
+            fontFamily: 'Arial',
+            italic: true,
+            move: undefined,
+            fadeIn: undefined,
+        });
+    });
+
+    it('strips characters that could break out of the font name', async () => {
+        const subtitles = await createReader(true).subtitles([
+            {
+                fileParts: [
+                    assFile([
+                        String.raw`Dialogue: 0,0:00:01.00,0:00:05.00,Default,,0,0,0,,{\fnEvil"; background:url(x)\fs20\pos(10,10)}Sign`,
+                    ]),
+                ],
+            },
+        ]);
+
+        expect(subtitles[0].assLayout?.fontFamily).toBe('Evil backgroundurlx');
     });
 });

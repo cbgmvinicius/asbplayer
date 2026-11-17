@@ -914,6 +914,9 @@ const settingsSchema = {
         convertNetflixRuby: {
             type: 'boolean',
         },
+        renderAssSigns: {
+            type: 'boolean',
+        },
         language: {
             type: 'string',
         },

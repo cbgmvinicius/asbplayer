@@ -327,6 +327,7 @@ function App({
             regexFilterTextReplacement: settings.subtitleRegexFilterTextReplacement,
             subtitleHtml: settings.subtitleHtml,
             convertNetflixRuby: settings.convertNetflixRuby,
+            renderAssSigns: settings.renderAssSigns,
             pgsParserWorkerFactory: async () => new pgsParserWorkerFactory(),
         });
     }, [
@@ -334,6 +335,7 @@ function App({
         settings.subtitleRegexFilterTextReplacement,
         settings.subtitleHtml,
         settings.convertNetflixRuby,
+        settings.renderAssSigns,
     ]);
     const supportsDictionaryPlayback = !extension.installed || extension.supportsDictionaryPlayback;
     const supportsDictionaryStatistics = !extension.installed || extension.supportsDictionaryStatistics;

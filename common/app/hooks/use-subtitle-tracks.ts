@@ -84,6 +84,7 @@ export const useSubtitleTracks = ({
                 const loadedSubtitles: DisplaySubtitleModel[] = nodes.map((subtitle, index) => ({
                     text: subtitle.text,
                     textImage: subtitle.textImage,
+                    assLayout: subtitle.assLayout,
                     start: subtitle.start + offset,
                     originalStart: subtitle.start,
                     end: subtitle.end + offset,

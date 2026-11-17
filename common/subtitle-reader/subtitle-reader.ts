@@ -7,7 +7,8 @@ import sanitize from 'sanitize-filename';
 import { removeSubtitleHtml } from '@project/common/util';
 import { WebVTT } from 'videojs-vtt.js';
 import { XMLParser } from 'fast-xml-parser';
-import type { LoadableSubtitleTrack, SubtitleTextImage, Token, Tokenization } from '@project/common';
+import type { LoadableSubtitleTrack, SubtitleAssLayout, SubtitleTextImage, Token, Tokenization } from '@project/common';
+import { assSignLayout } from '@project/common/subtitle-reader/ass-layout';
 import { SubtitleHtml } from '@project/common';
 import DOMPurify from 'dompurify';
 
@@ -105,6 +106,7 @@ interface SubtitleNode {
     end: number;
     text: string;
     textImage?: SubtitleTextImage;
+    assLayout?: SubtitleAssLayout;
     track: number;
     tokenization?: Tokenization;
 }
@@ -164,6 +166,7 @@ export default class SubtitleReader {
     private readonly _textFilter?: TextFilter;
     private readonly _removeXml: boolean;
     private readonly _convertNetflixRuby: boolean;
+    private readonly _renderAssSigns: boolean;
     private readonly _pgsWorkerFactory: () => Promise<Worker>;
     private xmlParser?: XMLParser;
 
@@ -172,12 +175,14 @@ export default class SubtitleReader {
         regexFilterTextReplacement,
         subtitleHtml,
         convertNetflixRuby,
+        renderAssSigns = false,
         pgsParserWorkerFactory: pgsWorkerFactory,
     }: {
         regexFilter: string;
         regexFilterTextReplacement: string;
         subtitleHtml: SubtitleHtml;
         convertNetflixRuby: boolean;
+        renderAssSigns?: boolean;
         pgsParserWorkerFactory: () => Promise<Worker>;
     }) {
         let regex: RegExp | undefined;
@@ -196,6 +201,7 @@ export default class SubtitleReader {
 
         this._removeXml = subtitleHtml === SubtitleHtml.remove;
         this._convertNetflixRuby = convertNetflixRuby;
+        this._renderAssSigns = renderAssSigns;
 
         this._pgsWorkerFactory = pgsWorkerFactory;
     }
@@ -327,10 +333,16 @@ export default class SubtitleReader {
 
         if (subtitleSourceFile.name.endsWith('.ass')) {
             const nodes = parseAss(await subtitleSourceFile.text(), {});
-            return nodes.dialogues
-                .filter((dialogue) => !isTypesetAssSign(dialogue))
-                .map((dialogue) => {
-                    return {
+            return nodes.dialogues.flatMap((dialogue): SubtitleNode[] => {
+                let assLayout: SubtitleAssLayout | undefined;
+                if (isTypesetAssSign(dialogue)) {
+                    // Signs are dropped unless they can be drawn at their position.
+                    assLayout = this._renderAssSigns ? assSignLayout(dialogue, nodes) : undefined;
+                    if (assLayout === undefined) return [];
+                }
+
+                return [
+                    {
                         start: Math.round(dialogue.start * 1000),
                         end: Math.round(dialogue.end * 1000),
                         text: this._filterText(
@@ -339,8 +351,10 @@ export default class SubtitleReader {
                                 .join('')
                         ).replace(assNewLineRegex, '\n'),
                         track: track,
-                    };
-                });
+                        ...(assLayout === undefined ? {} : { assLayout }),
+                    },
+                ];
+            });
         }
 
         if (subtitleSourceFile.name.endsWith('.ytsrv3')) {

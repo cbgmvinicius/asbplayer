@@ -14,6 +14,22 @@
     pointer-events: auto !important;
 }
 
+/* ASS signs: the container covers the video picture and signs are placed inside it in percent and cqh. */
+.asb-ass-signs-container {
+    position: absolute !important;
+    display: block !important;
+    z-index: 2147483645 !important;
+    pointer-events: none !important;
+    overflow: hidden !important;
+    container-type: size !important;
+}
+
+.asbplayer-ass-signs {
+    position: absolute !important;
+    inset: 0 !important;
+    pointer-events: none !important;
+}
+
 .asbplayer-subtitles,
 .asbplayer-fullscreen-subtitles {
     text-align: center !important;

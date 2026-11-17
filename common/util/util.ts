@@ -1013,6 +1013,8 @@ const subtitleModelComparators: FieldComparators<SubtitleModel> = {
     text: (a, b) => a === b,
     originalText: (a, b) => a === b,
     textImage: (a, b) => areSubtitleTextImagesEqual(a, b),
+    // Layouts are plain data read from the script, so comparing their serialized form is enough.
+    assLayout: (a, b) => a === b || JSON.stringify(a) === JSON.stringify(b),
     start: (a, b) => a === b,
     end: (a, b) => a === b,
     originalStart: (a, b) => a === b,

@@ -99,6 +99,7 @@ const MiscSettingTab: React.FC<Props> = ({
         subtitleRegexFilterTextReplacement,
         subtitleHtml,
         convertNetflixRuby,
+        renderAssSigns,
         webSocketClientEnabled,
         webSocketServerUrl,
         subtitleAboveThumbnail,
@@ -488,6 +489,16 @@ const MiscSettingTab: React.FC<Props> = ({
                         />
                     }
                     label={t('settings.convertNetflixRuby')}
+                    labelPlacement="start"
+                />
+                <SwitchLabelWithHoverEffect
+                    control={
+                        <Switch
+                            checked={renderAssSigns}
+                            onChange={(event) => onSettingChanged('renderAssSigns', event.target.checked)}
+                        />
+                    }
+                    label={t('settings.renderAssSigns')}
                     labelPlacement="start"
                 />
                 <SettingsSection>{t('settings.webSocketInterface')}</SettingsSection>

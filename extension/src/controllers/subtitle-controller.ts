@@ -54,6 +54,7 @@ import i18n from 'i18next';
 import type { ElementOverlay, ElementOverlayParams, KeyedHtml } from '@project/extension/src/services/element-overlay';
 import { CachingElementOverlay, OffsetAnchor } from '@project/extension/src/services/element-overlay';
 import { v4 as uuidv4 } from 'uuid';
+import { assSignHtml, syncAssSignAnimations } from '@project/common/util/ass-sign';
 import type { DictionaryProvider } from '@project/common/dictionary-db';
 import type Binding from '@/services/binding';
 
@@ -100,6 +101,9 @@ class VideoFetcher implements Fetcher {
     }
 }
 
+const ASB_ASS_SIGNS_CONTAINER_CLASS = 'asb-ass-signs-container';
+const ASB_ASS_SIGNS_CONTENT_CLASS = 'asbplayer-ass-signs';
+
 export default class SubtitleController {
     private readonly context: Binding;
     private readonly dictionary: DictionaryProvider;
@@ -121,6 +125,7 @@ export default class SubtitleController {
     subtitleAnnotations: SubtitleAnnotations;
     private bottomSubtitlesElementOverlay: ElementOverlay;
     private topSubtitlesElementOverlay: ElementOverlay;
+    private assSignsElementOverlay: ElementOverlay;
     private notificationElementOverlay: ElementOverlay;
     private shouldRenderBottomOverlay: boolean;
     private shouldRenderTopOverlay: boolean;
@@ -167,9 +172,15 @@ export default class SubtitleController {
         this.convertNetflixRuby = false;
         this.subtitleHtml = SubtitleHtml.remove;
         this.refreshCurrentSubtitle = false;
-        const { subtitlesElementOverlay, topSubtitlesElementOverlay, notificationElementOverlay } = this._overlays();
+        const {
+            subtitlesElementOverlay,
+            topSubtitlesElementOverlay,
+            assSignsElementOverlay,
+            notificationElementOverlay,
+        } = this._overlays();
         this.bottomSubtitlesElementOverlay = subtitlesElementOverlay;
         this.topSubtitlesElementOverlay = topSubtitlesElementOverlay;
+        this.assSignsElementOverlay = assSignsElementOverlay;
         this.notificationElementOverlay = notificationElementOverlay;
         const subtitleCollectionOptions: SubtitleCollectionOptions = {
             showingCheckRadiusMs: 150,
@@ -234,6 +245,7 @@ export default class SubtitleController {
         this.playbackPaused = paused;
         this.bottomSubtitlesElementOverlay.refresh();
         this.topSubtitlesElementOverlay.refresh();
+        this._syncAssSigns();
     }
 
     private _restorableTokenSelection(): RestorableTokenSelection | undefined {
@@ -263,6 +275,7 @@ export default class SubtitleController {
         this.subtitleAnnotations.reset();
         this.bottomSubtitlesElementOverlay.hide();
         this.topSubtitlesElementOverlay.hide();
+        this.assSignsElementOverlay.hide();
     }
 
     cacheHtml() {
@@ -406,6 +419,17 @@ export default class SubtitleController {
         return {
             subtitlesElementOverlay: new CachingElementOverlay(subtitleOverlayParams),
             topSubtitlesElementOverlay: new CachingElementOverlay(topSubtitleOverlayParams),
+            assSignsElementOverlay: new CachingElementOverlay({
+                targetElement: this.context.video,
+                nonFullscreenContainerClassName: ASB_ASS_SIGNS_CONTAINER_CLASS,
+                nonFullscreenContentClassName: ASB_ASS_SIGNS_CONTENT_CLASS,
+                fullscreenContainerClassName: ASB_ASS_SIGNS_CONTAINER_CLASS,
+                fullscreenContentClassName: ASB_ASS_SIGNS_CONTENT_CLASS,
+                offsetAnchor: OffsetAnchor.top,
+                applyContainerStylesOverride: (container) => this._coverVideoPicture(container),
+                onMouseOver: (event: MouseEvent) => this.onMouseOver?.(event),
+                onMouseOut: (event: MouseEvent) => this.onMouseOut?.(event),
+            }),
             notificationElementOverlay: new CachingElementOverlay(notificationOverlayParams),
         };
     }
@@ -523,6 +547,7 @@ export default class SubtitleController {
             .map((index) => this.subtitles[index])
             .filter((subtitle): subtitle is IndexedSubtitleModel => subtitle !== undefined);
         this.refreshShowingSubtitles();
+        this._syncAssSigns();
     }
 
     refreshShowingSubtitles(): void {
@@ -558,6 +583,7 @@ export default class SubtitleController {
         if ((!showOffset && !this._displaySubtitles) || this._forceHideSubtitles) {
             this.bottomSubtitlesElementOverlay.hide();
             this.topSubtitlesElementOverlay.hide();
+            this.assSignsElementOverlay.hide();
             return;
         }
         if (!subtitlesAreNew && !shouldRenderOffset && !this.refreshCurrentSubtitle) return;
@@ -566,20 +592,28 @@ export default class SubtitleController {
 
         this.refreshCurrentSubtitle = false;
         this._resetUnblurState();
+        // ASS signs are drawn where the script places them instead of in the subtitle box.
+        const flowingSubtitles = showingSubtitles.filter((subtitle) => subtitle.assLayout === undefined);
+        const flowingInvisibleSubtitles = invisibleSubtitles.filter((subtitle) => subtitle.assLayout === undefined);
         if (this.shouldRenderBottomOverlay) {
             this._renderSubtitles(
-                showingSubtitles.filter((subtitle) => this._getSubtitleTrackAlignment(subtitle.track) === 'bottom'),
-                invisibleSubtitles.filter((subtitle) => this._getSubtitleTrackAlignment(subtitle.track) === 'bottom'),
+                flowingSubtitles.filter((subtitle) => this._getSubtitleTrackAlignment(subtitle.track) === 'bottom'),
+                flowingInvisibleSubtitles.filter(
+                    (subtitle) => this._getSubtitleTrackAlignment(subtitle.track) === 'bottom'
+                ),
                 OffsetAnchor.bottom
             );
         }
         if (this.shouldRenderTopOverlay) {
             this._renderSubtitles(
-                showingSubtitles.filter((subtitle) => this._getSubtitleTrackAlignment(subtitle.track) === 'top'),
-                invisibleSubtitles.filter((subtitle) => this._getSubtitleTrackAlignment(subtitle.track) === 'top'),
+                flowingSubtitles.filter((subtitle) => this._getSubtitleTrackAlignment(subtitle.track) === 'top'),
+                flowingInvisibleSubtitles.filter(
+                    (subtitle) => this._getSubtitleTrackAlignment(subtitle.track) === 'top'
+                ),
                 OffsetAnchor.top
             );
         }
+        this._renderAssSigns(showingSubtitles.filter((subtitle) => subtitle.assLayout !== undefined));
 
         if (showOffset) {
             this._appendSubtitlesHtml(this._buildTextHtml(this._formatOffset(offset)));
@@ -609,6 +643,82 @@ export default class SubtitleController {
         } else {
             this._setSubtitlesHtml(this.bottomSubtitlesElementOverlay, html);
         }
+    }
+
+    private _renderAssSigns(signs: IndexedSubtitleModel[]) {
+        if (signs.length === 0) {
+            this.assSignsElementOverlay.hide();
+            return;
+        }
+
+        this.assSignsElementOverlay.setHtml(
+            signs.map((subtitle) => ({
+                // The text is part of the key so that reloaded subtitles at the same index don't reuse old elements.
+                key: `${subtitle.index}:${subtitle.originalStart}:${subtitle.text}`,
+                html: () => assSignHtml(subtitle.text, subtitle.assLayout!, subtitle.index),
+            }))
+        );
+        this._syncAssSigns();
+    }
+
+    private _syncAssSigns() {
+        const container = this.assSignsElementOverlay.containerElement;
+        if (container === undefined) return;
+        syncAssSignAnimations(
+            container,
+            this.context.currentTimeMs,
+            this.playbackPaused,
+            this.context.video.playbackRate,
+            (index) => this.subtitles[index]
+        );
+    }
+
+    // Covers the part of the video element where the picture is shown, leaving out letterboxing.
+    private _coverVideoPicture(container: HTMLElement) {
+        const video = this.context.video;
+        const rect = video.getBoundingClientRect();
+        if (
+            ![rect.left, rect.top, rect.width, rect.height].every(Number.isFinite) ||
+            rect.width <= 0 ||
+            rect.height <= 0
+        ) {
+            container.style.setProperty('visibility', 'hidden', 'important');
+            return;
+        }
+
+        container.style.removeProperty('visibility');
+        let { left, top, width, height } = rect;
+        if (video instanceof HTMLVideoElement && video.videoWidth > 0 && video.videoHeight > 0) {
+            const scale = Math.min(width / video.videoWidth, height / video.videoHeight);
+            left += (width - video.videoWidth * scale) / 2;
+            top += (height - video.videoHeight * scale) / 2;
+            width = video.videoWidth * scale;
+            height = video.videoHeight * scale;
+        }
+
+        // A static body is reported as offsetParent but doesn't position the container; the page does. Measuring
+        // from the body would shift the signs by any margin collapsed into it.
+        const offsetParent = container.offsetParent;
+        const containingBlock =
+            offsetParent instanceof HTMLElement &&
+            !(offsetParent === document.body && getComputedStyle(offsetParent).position === 'static')
+                ? offsetParent
+                : document.fullscreenElement
+                  ? container.parentElement
+                  : null;
+        if (containingBlock) {
+            const containingBlockRect = containingBlock.getBoundingClientRect();
+            left += containingBlock.scrollLeft - containingBlock.clientLeft - containingBlockRect.left;
+            top += containingBlock.scrollTop - containingBlock.clientTop - containingBlockRect.top;
+        } else {
+            left += window.scrollX;
+            top += window.scrollY;
+        }
+
+        container.style.left = `${left}px`;
+        container.style.top = `${top}px`;
+        container.style.width = `${width}px`;
+        container.style.height = `${height}px`;
     }
 
     private _resetUnblurState() {
@@ -727,6 +837,7 @@ export default class SubtitleController {
 
         this.bottomSubtitlesElementOverlay.dispose();
         this.topSubtitlesElementOverlay.dispose();
+        this.assSignsElementOverlay.dispose();
         this.notificationElementOverlay.dispose();
         this.onOffsetChange = undefined;
         this.onMouseOver = undefined;
@@ -736,6 +847,7 @@ export default class SubtitleController {
     refresh() {
         if (this.shouldRenderBottomOverlay) this.bottomSubtitlesElementOverlay.refresh();
         if (this.shouldRenderTopOverlay) this.topSubtitlesElementOverlay.refresh();
+        this.assSignsElementOverlay.refresh();
         this.notificationElementOverlay.refresh();
     }
 
@@ -799,6 +911,7 @@ export default class SubtitleController {
         this.subtitles = this.subtitles.map((s) => ({
             text: s.text,
             textImage: s.textImage,
+            assLayout: s.assLayout,
             start: s.originalStart + offset,
             originalStart: s.originalStart,
             end: s.originalEnd + offset,

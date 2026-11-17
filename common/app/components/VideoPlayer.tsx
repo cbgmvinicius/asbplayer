@@ -7,6 +7,7 @@ import type { MutableRefObject } from 'react';
 import { isMobile } from 'react-device-detect';
 import { makeStyles } from '@mui/styles';
 import { useWindowSize } from '@project/common/app/hooks/use-window-size';
+import AssSignLayer from '@project/common/app/components/AssSignLayer';
 import { PostMineAction, PlayMode, PostMinePlayback } from '@project/common';
 import type {
     FileModel,
@@ -740,6 +741,7 @@ export default function VideoPlayer({
         const shiftedSubtitles = subtitlesRef.current.map((s, i) => ({
             text: s.text,
             textImage: s.textImage,
+            assLayout: s.assLayout,
             start: s.originalStart + offset,
             originalStart: s.originalStart,
             end: s.originalEnd + offset,
@@ -2346,14 +2348,18 @@ export default function VideoPlayer({
 
     const subtitleAlignmentForTrack = (track: number) => subtitleAlignments[track] ?? subtitleAlignments[0];
     const subtitleElementsWithAlignment = (alignment: SubtitleAlignment) => {
-        const showing = showSubtitles.filter((subtitle) => subtitleAlignmentForTrack(subtitle.track) === alignment);
+        // ASS signs are drawn where the script places them instead of in the subtitle box.
+        const showing = showSubtitles.filter(
+            (subtitle) => subtitle.assLayout === undefined && subtitleAlignmentForTrack(subtitle.track) === alignment
+        );
         const invisible = invisibleSubtitles.filter(
-            (subtitle) => subtitleAlignmentForTrack(subtitle.track) === alignment
+            (subtitle) => subtitle.assLayout === undefined && subtitleAlignmentForTrack(subtitle.track) === alignment
         );
         return mapSubtitlesForDisplay(showing, invisible, elementForSubtitle);
     };
     const topSubtitleElements = displaySubtitles ? subtitleElementsWithAlignment('top') : [];
     const bottomSubtitleElements = displaySubtitles ? subtitleElementsWithAlignment('bottom') : [];
+    const assSigns = displaySubtitles ? showSubtitles.filter((subtitle) => subtitle.assLayout !== undefined) : [];
     const mobileOverlayModel = () => {
         if (!isMobile || (playing() && mineIntervalStartTimestamp === undefined)) {
             return undefined;
@@ -2498,6 +2504,18 @@ export default function VideoPlayer({
                             setHiddenVideoReady(true);
                         }
                     }}
+                />
+            )}
+            {assSigns.length > 0 && (
+                <AssSignLayer
+                    signs={assSigns}
+                    subtitles={subtitles}
+                    video={videoRef.current}
+                    containerRef={containerRef}
+                    layoutKey={`${windowWidth}x${windowHeight}:${videoWidth}x${videoHeight}`}
+                    zIndex={settings.subtitleAboveThumbnail ? 12 : 0}
+                    onMouseOver={handleSubtitleMouseOver}
+                    onMouseOut={handleSubtitleMouseOut}
                 />
             )}
             {topSubtitleElements.length > 0 && (

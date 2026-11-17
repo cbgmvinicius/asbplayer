@@ -196,6 +196,7 @@ const subtitleParsingSettingsKeys = [
     'subtitleRegexFilterTextReplacement',
     'subtitleHtml',
     'convertNetflixRuby',
+    'renderAssSigns',
 ] as const;
 
 type SubtitleParsingSettings = Pick<AsbplayerSettings, (typeof subtitleParsingSettingsKeys)[number]>;
@@ -1545,6 +1546,7 @@ export default class Binding {
                 subtitleRegexFilterTextReplacement: currentSettings.subtitleRegexFilterTextReplacement,
                 subtitleHtml: currentSettings.subtitleHtml,
                 convertNetflixRuby: currentSettings.convertNetflixRuby,
+                renderAssSigns: currentSettings.renderAssSigns,
             };
             void this._reloadSubtitles(subtitleSource).catch((error) =>
                 asbError('video/binding', 'Failed to refresh subtitles:', error)
@@ -2091,12 +2093,14 @@ export default class Binding {
             subtitleRegexFilterTextReplacement,
             subtitleHtml,
             convertNetflixRuby: convertNetflixRuby,
+            renderAssSigns: renderAssSigns,
         } = await this.settings.get([
             'streamingSubtitleListPreference',
             'subtitleRegexFilter',
             'subtitleRegexFilterTextReplacement',
             'subtitleHtml',
             'convertNetflixRuby',
+            'renderAssSigns',
         ]);
         const syncWithAsbplayerTab = async (withSyncedAsbplayerOnly: boolean, withAsbplayerId: string | undefined) => {
             // The existing sync protocol carries a flat file list. Include each
@@ -2140,6 +2144,7 @@ export default class Binding {
                         subtitleRegexFilterTextReplacement,
                         subtitleHtml,
                         convertNetflixRuby,
+                        renderAssSigns,
                     },
                     offset: this.playbackEngine.lastSubtitleOffset,
                 };
@@ -2183,6 +2188,7 @@ export default class Binding {
             regexFilterTextReplacement: settings.subtitleRegexFilterTextReplacement,
             subtitleHtml: settings.subtitleHtml,
             convertNetflixRuby: settings.convertNetflixRuby,
+            renderAssSigns: settings.renderAssSigns,
             pgsParserWorkerFactory,
         });
         const subtitles = await reader.subtitles(source.tracks);

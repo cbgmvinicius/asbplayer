@@ -521,6 +521,7 @@
         "subtitleRegexFilterDocs": "Subtitle text filtering guide and examples",
         "subtitleRegexFilterTextReplacement": "字幕の正規表現フィルタの置き換えテキスト",
         "convertNetflixRuby": "ルビーを検出して表示",
+        "renderAssSigns": "ASSの看板字幕を元の位置に表示",
         "subtitleHtml": "字幕に含まれるHTML",
         "subtitleHtmlRemove": "削除する",
         "subtitleHtmlRender": "レンダリングする",

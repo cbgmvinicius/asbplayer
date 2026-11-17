@@ -129,6 +129,7 @@ export interface MiscSettings {
     readonly subtitleRegexFilter: string;
     readonly subtitleRegexFilterTextReplacement: string;
     readonly convertNetflixRuby: boolean;
+    readonly renderAssSigns: boolean;
     readonly miningHistoryStorageLimit: number;
     readonly language: string;
     readonly clickToMineDefaultAction: PostMineAction;

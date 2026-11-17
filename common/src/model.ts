@@ -23,6 +23,34 @@ export interface SubtitleTextImage {
     readonly image: DimensionsModel;
 }
 
+/**
+ * Placement and look of an ASS typeset sign, taken from the script. Positions are fractions of the video's width
+ * and height, and sizes are fractions of its height, so the sign scales with the video.
+ */
+export interface SubtitleAssLayout {
+    /** Anchor point, as set by \pos or the start of \move. */
+    readonly x: number;
+    readonly y: number;
+    /** Numpad alignment (1-9) of the text box relative to the anchor point. */
+    readonly alignment: number;
+    /** End of a \move, with times in ms relative to the start of the subtitle. */
+    readonly move?: { readonly x: number; readonly y: number; readonly start: number; readonly end: number };
+    /** \fad durations in ms. */
+    readonly fadeIn?: number;
+    readonly fadeOut?: number;
+    readonly fontFamily: string;
+    readonly fontSize: number;
+    readonly color: string;
+    readonly outlineColor: string;
+    readonly outlineWidth: number;
+    readonly bold: boolean;
+    readonly italic: boolean;
+    /** Counterclockwise rotation in degrees (\frz). */
+    readonly rotation: number;
+    readonly scaleX: number;
+    readonly scaleY: number;
+}
+
 export interface TokenReading {
     pos: [number, number]; // Start/end relative position inside parent token
     reading: string;
@@ -60,6 +88,8 @@ export interface SubtitleModel {
     readonly text: string;
     readonly originalText?: string;
     readonly textImage?: SubtitleTextImage;
+    /** Set for ASS typeset signs when they are drawn where the script places them. */
+    readonly assLayout?: SubtitleAssLayout;
     readonly start: number;
     readonly end: number;
     readonly originalStart: number;

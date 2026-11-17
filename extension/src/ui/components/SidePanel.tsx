@@ -119,6 +119,7 @@ export default function SidePanel({
                 regexFilterTextReplacement: settings.subtitleRegexFilterTextReplacement,
                 subtitleHtml: settings.subtitleHtml,
                 convertNetflixRuby: settings.convertNetflixRuby,
+                renderAssSigns: settings.renderAssSigns,
                 pgsParserWorkerFactory,
             }),
         [
@@ -126,6 +127,7 @@ export default function SidePanel({
             settings.subtitleRegexFilterTextReplacement,
             settings.subtitleHtml,
             settings.convertNetflixRuby,
+            settings.renderAssSigns,
         ]
     );
     const [subtitles, setSubtitles] = useState<DisplaySubtitleModel[]>();

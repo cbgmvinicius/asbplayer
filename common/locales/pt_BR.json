@@ -521,6 +521,7 @@
         "subtitleRegexFilterDocs": "Subtitle text filtering guide and examples",
         "subtitleRegexFilterTextReplacement": "Substituição de texto do filtro regex da legenda",
         "convertNetflixRuby": "Detect and Display Ruby",
+        "renderAssSigns": "Mostrar placas ASS na posição original",
         "subtitleHtml": "HTML da Legenda",
         "subtitleHtmlRemove": "Remover",
         "subtitleHtmlRender": "Renderizar",

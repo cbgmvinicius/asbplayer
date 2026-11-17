@@ -227,6 +227,7 @@ export const defaultSettings: AsbplayerSettings = {
     subtitleRegexFilter: '',
     subtitleRegexFilterTextReplacement: '',
     convertNetflixRuby: false,
+    renderAssSigns: false,
     language: project.defaultLanguage,
     customAnkiFields: {},
     tags: [],

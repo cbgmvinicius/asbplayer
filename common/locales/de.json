@@ -521,6 +521,7 @@
         "subtitleRegexFilterDocs": "Subtitle text filtering guide and examples",
         "subtitleRegexFilterTextReplacement": "Untertitelfilter Ersetzung",
         "convertNetflixRuby": "Detect and Display Ruby",
+        "renderAssSigns": "Show ASS Signs in Place",
         "subtitleHtml": "Subtitle HTML",
         "subtitleHtmlRemove": "Remove",
         "subtitleHtmlRender": "Render",

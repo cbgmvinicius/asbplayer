@@ -706,6 +706,7 @@ function PlayerComponent(
             const newSubtitles = subtitles.map((s, i) => ({
                 text: s.text,
                 textImage: s.textImage,
+                assLayout: s.assLayout,
                 start: s.originalStart + offset,
                 originalStart: s.originalStart,
                 end: s.originalEnd + offset,
