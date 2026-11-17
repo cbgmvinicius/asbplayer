@@ -20,7 +20,21 @@ const finiteOr = (value: unknown, fallback: number) =>
 export const assSignLayout = (dialogue: Dialogue, compiled: CompiledASS): SubtitleAssLayout | undefined => {
     if (dialogue.clip !== undefined) return undefined;
     if (dialogue.slices.some((slice) => slice.fragments.some((fragment) => fragment.drawing))) return undefined;
+    if (dialogue.pos === undefined && dialogue.move === undefined) return undefined;
+    return layout(dialogue, compiled, false);
+};
 
+/**
+ * Builds the placement of a spoken line that the script puts somewhere other than the bottom of the screen, such as
+ * a second speaker at the top (\an8) or a line next to a character (\pos). Returns undefined for lines at the bottom.
+ */
+export const assDialogueLayout = (dialogue: Dialogue, compiled: CompiledASS): SubtitleAssLayout | undefined => {
+    const atBottom = dialogue.alignment >= 1 && dialogue.alignment <= 3;
+    if (dialogue.pos === undefined && dialogue.move === undefined && atBottom) return undefined;
+    return layout(dialogue, compiled, true);
+};
+
+const layout = (dialogue: Dialogue, compiled: CompiledASS, isDialogue: boolean): SubtitleAssLayout => {
     const width = compiled.width > 0 ? compiled.width : 384;
     const height = compiled.height > 0 ? compiled.height : 288;
     const firstSlice = dialogue.slices[0];
@@ -31,6 +45,7 @@ export const assSignLayout = (dialogue: Dialogue, compiled: CompiledASS): Subtit
         ...firstFragment?.tag,
     };
 
+    const alignment = dialogue.alignment >= 1 && dialogue.alignment <= 9 ? dialogue.alignment : 2;
     let x: number;
     let y: number;
     let move: SubtitleAssLayout['move'];
@@ -46,7 +61,12 @@ export const assSignLayout = (dialogue: Dialogue, compiled: CompiledASS): Subtit
         x = dialogue.pos.x;
         y = dialogue.pos.y;
     } else {
-        return undefined;
+        // Without \pos the line sits inside the margins, at the edge or middle its alignment points to.
+        const column = (alignment - 1) % 3;
+        const row = Math.floor((alignment - 1) / 3);
+        const { left, right, vertical } = dialogue.margin;
+        x = [left, (left + width - right) / 2, width - right][column];
+        y = [height - vertical, height / 2, vertical][row];
     }
 
     const fade = dialogue.fade?.type === 'fad' ? dialogue.fade : undefined;
@@ -54,7 +74,8 @@ export const assSignLayout = (dialogue: Dialogue, compiled: CompiledASS): Subtit
     return {
         x: x / width,
         y: y / height,
-        alignment: dialogue.alignment >= 1 && dialogue.alignment <= 9 ? dialogue.alignment : 2,
+        alignment,
+        ...(isDialogue ? { dialogue: true } : {}),
         move,
         fadeIn: fade && fade.t1 > 0 ? fade.t1 : undefined,
         fadeOut: fade && fade.t2 > 0 ? fade.t2 : undefined,

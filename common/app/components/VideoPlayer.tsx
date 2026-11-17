@@ -2514,6 +2514,10 @@ export default function VideoPlayer({
                     containerRef={containerRef}
                     layoutKey={`${windowWidth}x${windowHeight}:${videoWidth}x${videoHeight}`}
                     zIndex={settings.subtitleAboveThumbnail ? 12 : 0}
+                    appearanceForTrack={(track) => ({
+                        style: trackStyles[track]?.styleString ?? trackStyles[0]?.styleString ?? '',
+                        className: trackStyles[track]?.classes ?? trackStyles[0]?.classes ?? '',
+                    })}
                     onMouseOver={handleSubtitleMouseOver}
                     onMouseOut={handleSubtitleMouseOut}
                 />

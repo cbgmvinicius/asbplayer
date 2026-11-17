@@ -8,7 +8,7 @@ import { removeSubtitleHtml } from '@project/common/util';
 import { WebVTT } from 'videojs-vtt.js';
 import { XMLParser } from 'fast-xml-parser';
 import type { LoadableSubtitleTrack, SubtitleAssLayout, SubtitleTextImage, Token, Tokenization } from '@project/common';
-import { assSignLayout } from '@project/common/subtitle-reader/ass-layout';
+import { assDialogueLayout, assSignLayout } from '@project/common/subtitle-reader/ass-layout';
 import { SubtitleHtml } from '@project/common';
 import DOMPurify from 'dompurify';
 
@@ -339,6 +339,9 @@ export default class SubtitleReader {
                     // Signs are dropped unless they can be drawn at their position.
                     assLayout = this._renderAssSigns ? assSignLayout(dialogue, nodes) : undefined;
                     if (assLayout === undefined) return [];
+                } else if (this._renderAssSigns) {
+                    // Lines placed away from the bottom, e.g. a second speaker at the top, keep their place too.
+                    assLayout = assDialogueLayout(dialogue, nodes);
                 }
 
                 return [

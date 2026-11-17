@@ -652,11 +652,18 @@ export default class SubtitleController {
         }
 
         this.assSignsElementOverlay.setHtml(
-            signs.map((subtitle) => ({
-                // The text is part of the key so that reloaded subtitles at the same index don't reuse old elements.
-                key: `${subtitle.index}:${subtitle.originalStart}:${subtitle.text}`,
-                html: () => assSignHtml(subtitle.text, subtitle.assLayout!, subtitle.index),
-            }))
+            signs.map((subtitle) => {
+                const appearance = {
+                    style: this._subtitleStyles(subtitle.track),
+                    className: this._subtitleClasses(subtitle.track),
+                };
+                return {
+                    // Text and appearance are part of the key so that reloaded subtitles or changed settings
+                    // don't reuse old elements.
+                    key: `${subtitle.index}:${subtitle.originalStart}:${subtitle.text}:${appearance.style}:${appearance.className}`,
+                    html: () => assSignHtml(subtitle.text, subtitle.assLayout!, subtitle.index, appearance),
+                };
+            })
         );
         this._syncAssSigns();
     }

@@ -83,8 +83,11 @@ describe('ASS typeset signs', () => {
             ['Classroom', true],
             ['Rustle\nRustle', true],
             ['This is where it starts.', false],
-            ['Look up!', false],
+            ['Look up!', true],
         ]);
+        expect(subtitles[0].assLayout?.dialogue).toBeUndefined();
+        // Repositioned dialogue keeps its place but is marked as dialogue, so it's drawn with the user's appearance.
+        expect(subtitles[3].assLayout).toMatchObject({ x: 460 / 640, y: 247.5 / 360, alignment: 2, dialogue: true });
         expect(subtitles[0].assLayout).toEqual({
             x: 0.5,
             y: 0.1,
@@ -112,6 +115,38 @@ describe('ASS typeset signs', () => {
             move: undefined,
             fadeIn: undefined,
         });
+    });
+
+    it('places dialogue that the script aligns away from the bottom', async () => {
+        const subtitles = await createReader(true).subtitles([
+            {
+                fileParts: [
+                    assFile([
+                        'Dialogue: 0,0:00:01.00,0:00:03.00,Default,A,0,0,0,,Bottom line.',
+                        String.raw`Dialogue: 0,0:00:01.00,0:00:03.00,Default,B,0,0,0,,{\an8}Top line.`,
+                        String.raw`Dialogue: 0,0:00:01.00,0:00:03.00,Default,C,0,0,0,,{\an7}Top left line.`,
+                        String.raw`Dialogue: 0,0:00:01.00,0:00:03.00,Default,D,0,0,0,,{\an1}Bottom left line.`,
+                    ]),
+                ],
+            },
+        ]);
+
+        expect(subtitles.map((subtitle) => [subtitle.text, subtitle.assLayout])).toEqual([
+            ['Bottom line.', undefined],
+            ['Top line.', expect.objectContaining({ x: 0.5, y: 20 / 360, alignment: 8, dialogue: true })],
+            ['Top left line.', expect.objectContaining({ x: 10 / 640, y: 20 / 360, alignment: 7, dialogue: true })],
+            ['Bottom left line.', undefined],
+        ]);
+    });
+
+    it('keeps dialogue in the subtitle box when signs are not rendered', async () => {
+        const subtitles = await createReader(false).subtitles([
+            {
+                fileParts: [assFile([String.raw`Dialogue: 0,0:00:01.00,0:00:03.00,Default,B,0,0,0,,{\an8}Top line.`])],
+            },
+        ]);
+
+        expect(subtitles[0].assLayout).toBeUndefined();
     });
 
     it('strips characters that could break out of the font name', async () => {

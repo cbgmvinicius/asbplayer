@@ -68,6 +68,32 @@ describe('assSignHtml', () => {
         expect(root.querySelectorAll('[data-asb-ass-index]')).toHaveLength(1);
     });
 
+    it("draws placed dialogue with the user's appearance and the script's place", () => {
+        const appearance = {
+            style: 'color: rgb(1, 2, 3); font-size: 40px; font-family: "Noto Sans"',
+            className: 'blur',
+        };
+        const root = render(
+            assSignHtml('Top line', { ...layout, dialogue: true, italic: true, rotation: 0 }, 0, appearance)
+        );
+        const text = root.firstElementChild!.firstElementChild as HTMLElement;
+
+        expect(text.classList.contains('blur')).toBe(true);
+        expect(text.style.color).toBe('rgb(1, 2, 3)');
+        expect(text.style.fontSize).toBe('40px');
+        expect(text.style.fontFamily).toBe('"Noto Sans"');
+        expect(text.style.fontStyle).toBe('italic');
+        expect(text.style.transform).toBe('translate(-50%, -0%) rotate(0deg) scale(0.9, 1)');
+    });
+
+    it("keeps the script's look for signs even when an appearance is given", () => {
+        const root = render(assSignHtml('Sign', layout, 0, { style: 'color: rgb(1, 2, 3)', className: 'blur' }));
+        const text = root.firstElementChild!.firstElementChild as HTMLElement;
+
+        expect(text.classList.contains('blur')).toBe(false);
+        expect(text.style.color).toBe('rgb(255, 128, 0)');
+    });
+
     it('skips animations when the browser has none', () => {
         const root = render(assSignHtml('Sign', { ...layout, fadeIn: 200 }, 0));
 

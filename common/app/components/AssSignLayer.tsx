@@ -2,6 +2,7 @@ import React, { useEffect, useLayoutEffect, useRef } from 'react';
 import type { RefObject } from 'react';
 import type { IndexedSubtitleModel, SubtitleModel } from '@project/common';
 import { assSignHtml, syncAssSignAnimations } from '@project/common/util/ass-sign';
+import type { SubtitleAppearance } from '@project/common/util/ass-sign';
 
 interface Props {
     signs: IndexedSubtitleModel[];
@@ -11,6 +12,7 @@ interface Props {
     // Changes whenever the player is resized, so the picture area is measured again.
     layoutKey: string;
     zIndex: number;
+    appearanceForTrack: (track: number) => SubtitleAppearance;
     onMouseOver: React.MouseEventHandler<HTMLDivElement>;
     onMouseOut: React.MouseEventHandler<HTMLDivElement>;
 }
@@ -23,6 +25,7 @@ export default function AssSignLayer({
     containerRef,
     layoutKey,
     zIndex,
+    appearanceForTrack,
     onMouseOver,
     onMouseOut,
 }: Props) {
@@ -88,7 +91,9 @@ export default function AssSignLayer({
                 zIndex,
             }}
             dangerouslySetInnerHTML={{
-                __html: signs.map((sign) => assSignHtml(sign.text, sign.assLayout!, sign.index)).join(''),
+                __html: signs
+                    .map((sign) => assSignHtml(sign.text, sign.assLayout!, sign.index, appearanceForTrack(sign.track)))
+                    .join(''),
             }}
         />
     );

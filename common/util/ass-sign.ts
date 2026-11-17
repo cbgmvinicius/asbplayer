@@ -37,7 +37,18 @@ const outlineShadow = (color: string, width: number) => {
  * HTML for one sign. `html` is the subtitle's already sanitized text. `index` identifies the subtitle so that
  * {@link syncAssSignAnimations} can find its timing.
  */
-export const assSignHtml = (html: string, layout: SubtitleAssLayout, index: number) => {
+export interface SubtitleAppearance {
+    /** Inline CSS for the user's subtitle appearance on this track. */
+    style: string;
+    className: string;
+}
+
+export const assSignHtml = (
+    html: string,
+    layout: SubtitleAssLayout,
+    index: number,
+    dialogueAppearance?: SubtitleAppearance
+) => {
     const column = (layout.alignment - 1) % 3; // 0 left, 1 center, 2 right
     const row = Math.floor((layout.alignment - 1) / 3); // 0 bottom, 1 middle, 2 top
     const anchorX = column * 50;
@@ -50,29 +61,51 @@ export const assSignHtml = (html: string, layout: SubtitleAssLayout, index: numb
         layout.fadeIn !== undefined || layout.fadeOut !== undefined
             ? ` ${fadeAttribute}="${layout.fadeIn ?? 0},${layout.fadeOut ?? 0}"`
             : '';
-    const fontFamily = layout.fontFamily ? `"${layout.fontFamily}", sans-serif` : 'sans-serif';
-    const textStyle = [
+    const placement = [
         'position:absolute',
         'left:0',
         'top:0',
-        'white-space:pre',
-        'line-height:1.15',
         'pointer-events:auto',
         `text-align:${textAlign}`,
         `transform-origin:${anchorX}% ${anchorY}%`,
         `transform:translate(-${anchorX}%, -${anchorY}%) rotate(${-layout.rotation}deg) scale(${layout.scaleX}, ${layout.scaleY})`,
-        `font-family:${fontFamily}`,
-        `font-size:${cqh(layout.fontSize * fontSizeToEm)}`,
-        `font-weight:${layout.bold ? 700 : 400}`,
-        `font-style:${layout.italic ? 'italic' : 'normal'}`,
-        `color:${layout.color}`,
-        `text-shadow:${outlineShadow(layout.outlineColor, layout.outlineWidth)}`,
-    ].join(';');
+    ];
+    const useDialogueAppearance = layout.dialogue === true && dialogueAppearance !== undefined;
+    let look: string[];
+    if (useDialogueAppearance) {
+        // Spoken lines keep the user's subtitle appearance; only their place and italics come from the script.
+        look = [
+            'white-space:pre-line',
+            'width:max-content',
+            'max-width:90cqw',
+            // Same defaults as the subtitle box, for what the user's appearance leaves unset.
+            'color:white',
+            'font-family:sans-serif',
+            dialogueAppearance.style,
+            ...(layout.italic ? ['font-style:italic'] : []),
+        ];
+    } else {
+        const fontFamily = layout.fontFamily ? `"${layout.fontFamily}", sans-serif` : 'sans-serif';
+        look = [
+            'white-space:pre',
+            'line-height:1.15',
+            `font-family:${fontFamily}`,
+            `font-size:${cqh(layout.fontSize * fontSizeToEm)}`,
+            `font-weight:${layout.bold ? 700 : 400}`,
+            `font-style:${layout.italic ? 'italic' : 'normal'}`,
+            `color:${layout.color}`,
+            `text-shadow:${outlineShadow(layout.outlineColor, layout.outlineWidth)}`,
+        ];
+    }
+    const textStyle = [...placement, ...look].filter((declaration) => declaration !== '').join(';');
+    const textClass = useDialogueAppearance
+        ? `${ASB_ASS_SIGN_CLASS}-text ${escapeAttribute(dialogueAppearance.className)}`.trim()
+        : `${ASB_ASS_SIGN_CLASS}-text`;
 
     return (
         `<div class="${ASB_ASS_SIGN_CLASS}" ${indexAttribute}="${index}"${move}${fade} ` +
         `style="position:absolute;left:${percent(layout.x)};top:${percent(layout.y)};width:0;height:0;">` +
-        `<div class="${ASB_ASS_SIGN_CLASS}-text" style="${escapeAttribute(textStyle)}">${html}</div></div>`
+        `<div class="${textClass}" style="${escapeAttribute(textStyle)}">${html}</div></div>`
     );
 };
 

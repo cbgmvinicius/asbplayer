@@ -33,6 +33,11 @@ export interface SubtitleAssLayout {
     readonly y: number;
     /** Numpad alignment (1-9) of the text box relative to the anchor point. */
     readonly alignment: number;
+    /**
+     * Set for spoken lines the script places away from the bottom, e.g. a second speaker at the top. They are drawn
+     * at their position with the user's subtitle appearance instead of the script's look.
+     */
+    readonly dialogue?: boolean;
     /** End of a \move, with times in ms relative to the start of the subtitle. */
     readonly move?: { readonly x: number; readonly y: number; readonly start: number; readonly end: number };
     /** \fad durations in ms. */
